@@ -1,4 +1,6 @@
 #![warn(clippy::pedantic)]
+#![windows_subsystem = "windows"]
+
 use std::{
     sync::{
         mpsc::{channel, Receiver, Sender},
