@@ -10,3 +10,10 @@ impl NotMut for bool {
         *self = self.not();
     }
 }
+
+#[derive(Debug)]
+pub enum KeyType {
+    Repeated,
+    Keybind,
+    None,
+}
