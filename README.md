@@ -18,7 +18,7 @@ cargo install --git https://github.com/S0raWasTaken/XKeyClicker
 ``` 
 That already moves your built binary to your cargo bin folder
 ### Using pre-built binaries
-I haven't build binaries yet, but this option will be available in the future
+I haven't built binaries yet, but this option will be available in the future
 
 ## About
 This project was inspired on [XClicker](https://github.com/robiot/xclicker), a mouse autoclicker for X11 (that also works on wayland last time I checked).<br><br>
