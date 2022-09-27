@@ -17,3 +17,8 @@ pub enum KeyType {
     Keybind,
     None,
 }
+
+pub struct SendBox<T>(pub T);
+
+unsafe impl<T> Send for SendBox<T> {}
+unsafe impl<T> Sync for SendBox<T> {}

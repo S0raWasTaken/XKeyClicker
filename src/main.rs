@@ -14,7 +14,7 @@ use gtk::{
     traits::{ButtonExt, EntryExt, GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, Builder, Button, EditableSignals, Entry,
 };
-use primitives::{KeyType, NotMut};
+use primitives::{KeyType, NotMut, SendBox};
 use rdev::{listen, simulate, Event, EventType, Key};
 
 static KEYBIND: Mutex<Key> = Mutex::new(Key::F7);
@@ -22,11 +22,6 @@ static STATE: Mutex<bool> = Mutex::new(false);
 static SHOULD_RECV: Mutex<KeyType> = Mutex::new(KeyType::None);
 static COOLDOWN: Mutex<u64> = Mutex::new(100);
 static REPEATED_KEY: Mutex<Option<Key>> = Mutex::new(None);
-
-struct SendBox<T>(T);
-
-unsafe impl<T> Send for SendBox<T> {}
-unsafe impl<T> Sync for SendBox<T> {}
 
 mod primitives;
 
