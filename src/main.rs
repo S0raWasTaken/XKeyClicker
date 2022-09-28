@@ -1,121 +1,114 @@
-#![warn(clippy::pedantic)]
+mod util;
+
 use std::{
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        Arc, Mutex,
-    },
-    thread::{sleep, spawn},
+    sync::{Arc, Mutex},
+    thread,
     time::Duration,
 };
 
-use gtk::{
-    gio::ApplicationFlags,
-    prelude::{ApplicationExt, ApplicationExtManual, BuilderExtManual},
-    traits::{ButtonExt, EntryExt, GtkWindowExt, WidgetExt},
-    Application, ApplicationWindow, Builder, Button, EditableSignals, Entry,
+use eframe::{
+    egui::{self, DragValue},
+    epaint::Vec2,
+    App as EApp, NativeOptions,
 };
-use primitives::NotMut;
-use rdev::{listen, simulate, Event, EventType, Key};
-
-static KEYBIND: Mutex<Key> = Mutex::new(Key::F7);
-static STATE: Mutex<bool> = Mutex::new(false);
-static SHOULD_RECV: Mutex<bool> = Mutex::new(false);
-static COOLDOWN: Mutex<u64> = Mutex::new(100);
-static REPEATED_KEY: Mutex<Option<Key>> = Mutex::new(None);
-
-mod primitives;
+use rdev::{simulate, EventType, Key};
+use tokio::sync::watch;
+use util::{key_button, Keyboard};
 
 fn main() {
-    let (kb_sender, kb_receiver) = channel();
-    let kb_receiver = Arc::new(kb_receiver);
+    let mut opts = NativeOptions::default();
 
-    // Spawn keybind listener
-    spawn(move || listen(move |e| keybind(&e, &kb_sender)).unwrap());
+    opts.max_window_size = Some(Vec2::new(420., 52.));
+    opts.resizable = false;
 
-    // Spawn auto clicker
-    spawn(auto_clicker);
-
-    let app = Application::new(Some("com.s0ra.xkeyclicker"), ApplicationFlags::default());
-    app.connect_activate(move |app| build_ui(app, kb_receiver.clone()));
-    app.run();
+    eframe::run_native("XKeyClicker", opts, Box::new(|_| Box::new(App::default())))
 }
 
-fn auto_clicker() {
-    loop {
-        if *STATE.lock().unwrap() {
-            if let Some(key) = *REPEATED_KEY.lock().unwrap() {
-                let delay = Duration::from_millis(*COOLDOWN.lock().unwrap());
-                simulate(&EventType::KeyPress(key)).unwrap();
-                simulate(&EventType::KeyRelease(key)).unwrap();
-                sleep(delay);
-            }
+#[derive(Default, Clone)]
+struct Config {
+    is_changing_keybind: bool,
+    current_keybind: Option<Key>,
+    is_changing_repeated_key: bool,
+    repeated_key: Option<Key>,
+    click_interval: u64,
+}
+
+struct App {
+    config: Config,
+    keyboard: Arc<Mutex<Keyboard>>,
+    handle_tx: watch::Sender<Config>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        let (tx, rx) = watch::channel(Config::default());
+        let keyboard = Arc::new(Mutex::new(Keyboard::start_listening()));
+        let handle_kb = keyboard.clone();
+
+        thread::spawn(move || loop {
+            let _ = handle(&handle_kb, &rx);
+        });
+
+        Self {
+            keyboard,
+            config: Config::default(),
+            handle_tx: tx,
         }
     }
 }
 
-fn build_ui(app: &Application, kb_receiver: Arc<Receiver<Key>>) {
-    let builder = Builder::from_string(include_str!("xkeyclicker.ui"));
-    let window: ApplicationWindow = builder.object("window").unwrap();
+impl EApp for App {
+    fn update(&mut self, cx: &egui::Context, _frame: &mut eframe::Frame) {
+        let Self { config, .. } = self;
 
-    window.set_application(Some(app));
+        egui::CentralPanel::default().show(cx, |panel| {
+            panel.horizontal(|h| {
+                h.horizontal(|h| {
+                    h.label("Click Interval");
 
-    let time_millis: Entry = builder.object("time_millis").unwrap();
+                    h.add(DragValue::new(&mut config.click_interval).suffix("ms"));
+                });
 
-    time_millis.connect_changed(|entry| {
-        if let Ok(cooldown) = entry.buffer().text().parse::<u64>() {
-            *COOLDOWN.lock().unwrap() = cooldown;
-        } else if !entry.buffer().text().is_empty() {
-            entry.set_text("100");
-            *COOLDOWN.lock().unwrap() = 100;
-        }
-    });
+                h.vertical_centered_justified(|v| {
+                    key_button(
+                        v,
+                        &self.keyboard,
+                        "Change Keybind",
+                        &mut config.is_changing_keybind,
+                        &mut config.current_keybind,
+                    );
+                    key_button(
+                        v,
+                        &self.keyboard,
+                        "Change Repeated key",
+                        &mut config.is_changing_repeated_key,
+                        &mut config.repeated_key,
+                    );
+                })
+            });
+        });
 
-    let start_keybind_button: Button = builder.object("start_keybind").unwrap();
-    let keybind_entry: Entry = builder.object("keybind_entry").unwrap();
-
-    let kb_receiver_copy = kb_receiver.clone();
-
-    start_keybind_button
-        .connect_clicked(move |_| set_start_keybind(&kb_receiver.clone(), &keybind_entry));
-
-    let key_selector_button: Button = builder.object("key_selector").unwrap();
-    let repeated_key_entry: Entry = builder.object("repeated_key_entry").unwrap();
-
-    key_selector_button
-        .connect_clicked(move |_| set_repeated_key(&kb_receiver_copy.clone(), &repeated_key_entry));
-
-    window.show_all();
+        self.handle_tx.send_replace(config.clone());
+    }
 }
 
-fn set_repeated_key(kb_receiver: &Arc<Receiver<Key>>, repeated_key_entry: &Entry) {
-    *SHOULD_RECV.lock().unwrap() = true;
-    let key = kb_receiver.recv().unwrap();
-    *SHOULD_RECV.lock().unwrap() = false;
-    *REPEATED_KEY.lock().unwrap() = Some(key);
+fn handle(keyboard: &Mutex<Keyboard>, app: &watch::Receiver<Config>) -> Option<()> {
+    let app = app.borrow();
+    if app.is_changing_repeated_key || app.is_changing_keybind {
+        return None;
+    };
 
-    repeated_key_entry.set_text(&format!("{key:?}"));
-}
+    let repeated_key = app.repeated_key?;
+    let current_key = app.current_keybind?;
+    let key = keyboard.lock().unwrap().read();
 
-fn set_start_keybind(kb_receiver: &Arc<Receiver<Key>>, keybind_entry: &Entry) {
-    *SHOULD_RECV.lock().unwrap() = true;
-    let key = kb_receiver.recv().unwrap();
-    *SHOULD_RECV.lock().unwrap() = false;
-    *KEYBIND.lock().unwrap() = key;
-
-    keybind_entry.set_text(&format!("{key:?}"));
-}
-
-fn keybind(event: &Event, sender: &Sender<Key>) {
-    if let Event {
-        time: _,
-        name: _,
-        event_type: EventType::KeyPress(key),
-    } = event
-    {
-        if *SHOULD_RECV.lock().unwrap() {
-            sender.send(*key).unwrap();
-        } else if *key == *KEYBIND.lock().unwrap() {
-            STATE.lock().unwrap().not_mut();
+    if let Some(keybind) = key {
+        if keybind == current_key {
+            simulate(&EventType::KeyPress(repeated_key)).ok();
+            simulate(&EventType::KeyRelease(repeated_key)).ok();
+            std::thread::sleep(Duration::from_millis(app.click_interval));
         }
     }
+
+    Some(())
 }
