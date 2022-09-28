@@ -1,4 +1,7 @@
-use std::{sync::mpsc, thread};
+use std::{
+    sync::{mpsc, Mutex},
+    thread,
+};
 
 use eframe::egui::Ui;
 use tokio::sync::watch;
@@ -40,6 +43,7 @@ impl Keyboard {
     }
 
     pub fn read(&self) -> Option<Key> {
+        self.stop();
         self.should_receive.send_replace(true);
         self.receiver.try_recv().ok()
     }
@@ -51,11 +55,13 @@ impl Keyboard {
 
 pub(crate) fn key_button(
     ui: &mut Ui,
-    keyboard: &Keyboard,
+    keyboard: &Mutex<Keyboard>,
     text: &str,
     changing: &mut bool,
     target: &mut Option<Key>,
 ) {
+    let keyboard = keyboard.lock().unwrap();
+
     if ui.button(text).clicked() {
         *changing = true;
     }
@@ -63,7 +69,6 @@ pub(crate) fn key_button(
         if let Some(key) = keyboard.read() {
             *changing = false;
             *target = Some(key);
-            keyboard.stop();
         }
     }
 
