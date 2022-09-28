@@ -2,7 +2,7 @@ mod util;
 
 use eframe::{egui, App as EApp, NativeOptions};
 use rdev::Key;
-use util::Keyboard;
+use util::{key_button, Keyboard};
 
 fn main() {
     let opts = NativeOptions::default();
@@ -15,6 +15,8 @@ struct App {
     keyboard: Keyboard,
     is_changing_keybind: bool,
     current_keybind: Option<Key>,
+    is_changing_repeated_key: bool,
+    repeated_key: Option<Key>,
 }
 
 impl Default for App {
@@ -25,6 +27,8 @@ impl Default for App {
             click_interval: 0,
             current_keybind: None,
             raw_click_interval: String::new(),
+            is_changing_repeated_key: false,
+            repeated_key: None,
         }
     }
 }
@@ -46,24 +50,23 @@ impl EApp for App {
             });
 
             panel.horizontal(|h| {
-                if h.button("Change keybind").clicked() {
-                    self.is_changing_keybind = true;
-                }
+                key_button(
+                    h,
+                    &self.keyboard,
+                    "Change Keybind",
+                    &mut self.is_changing_keybind,
+                    &mut self.current_keybind,
+                );
+            });
 
-                if let Some(key) = self.keyboard.read() {
-                    self.is_changing_keybind = false;
-                    self.current_keybind = Some(key);
-                }
-
-                if self.is_changing_keybind {
-                    h.label("Press any key...");
-                } else {
-                    if let Some(key) = self.current_keybind {
-                        h.label(format!("Current: {key:?}"));
-                    } else {
-                        h.label("Current: None");
-                    }
-                }
+            panel.horizontal(|h| {
+                key_button(
+                    h,
+                    &self.keyboard,
+                    "Change Repeated key",
+                    &mut self.is_changing_repeated_key,
+                    &mut self.repeated_key,
+                );
             })
         });
     }

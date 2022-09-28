@@ -1,5 +1,6 @@
 use std::{sync::mpsc, thread};
 
+use eframe::egui::Ui;
 use tokio::sync::watch;
 
 use rdev::{listen, Event, EventType, Key};
@@ -39,10 +40,40 @@ impl Keyboard {
     }
 
     pub fn read(&self) -> Option<Key> {
-        self.should_receive.send(true).ok()?;
-        let key = self.receiver.try_recv().ok()?;
-        self.should_receive.send(false).ok()?;
+        self.should_receive.send_replace(true);
+        self.receiver.try_recv().ok()
+    }
 
-        Some(key)
+    pub fn stop(&self) {
+        self.should_receive.send_replace(false);
+    }
+}
+
+pub(crate) fn key_button(
+    ui: &mut Ui,
+    keyboard: &Keyboard,
+    text: &str,
+    changing: &mut bool,
+    target: &mut Option<Key>,
+) {
+    if ui.button(text).clicked() {
+        *changing = true;
+    }
+    if *changing {
+        if let Some(key) = keyboard.read() {
+            *changing = false;
+            *target = Some(key);
+            keyboard.stop();
+        }
+    }
+
+    if *changing {
+        ui.label("Press any key...");
+    } else {
+        if let Some(key) = target {
+            ui.label(format!("Current: {key:?}"));
+        } else {
+            ui.label("Current: None");
+        }
     }
 }
