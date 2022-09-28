@@ -6,13 +6,21 @@ use std::{
     time::Duration,
 };
 
-use eframe::{egui, App as EApp, NativeOptions};
+use eframe::{
+    egui::{self, DragValue},
+    epaint::Vec2,
+    App as EApp, NativeOptions,
+};
 use rdev::{simulate, EventType, Key};
 use tokio::sync::watch;
 use util::{key_button, Keyboard};
 
 fn main() {
-    let opts = NativeOptions::default();
+    let mut opts = NativeOptions::default();
+
+    opts.max_window_size = Some(Vec2::new(420., 52.));
+    opts.resizable = false;
+
     eframe::run_native("XKeyClicker", opts, Box::new(|_| Box::new(App::default())))
 }
 
@@ -26,7 +34,6 @@ struct Config {
 }
 
 struct App {
-    raw_click_interval: String,
     config: Config,
     keyboard: Arc<Mutex<Keyboard>>,
     handle_tx: watch::Sender<Config>,
@@ -45,7 +52,6 @@ impl Default for App {
         Self {
             keyboard,
             config: Config::default(),
-            raw_click_interval: String::from("0"),
             handle_tx: tx,
         }
     }
@@ -57,38 +63,28 @@ impl EApp for App {
 
         egui::CentralPanel::default().show(cx, |panel| {
             panel.horizontal(|h| {
-                h.label("Click Interval (In Miliseconds)");
+                h.horizontal(|h| {
+                    h.label("Click Interval");
 
-                let old = self.raw_click_interval.clone();
-                h.text_edit_singleline(&mut self.raw_click_interval);
+                    h.add(DragValue::new(&mut config.click_interval).suffix("ms"));
+                });
 
-                if !self.raw_click_interval.is_empty() {
-                    if let Ok(click_interval) = self.raw_click_interval.parse() {
-                        config.click_interval = click_interval;
-                    } else {
-                        self.raw_click_interval = old;
-                    }
-                }
-            });
-
-            panel.horizontal(|h| {
-                key_button(
-                    h,
-                    &self.keyboard,
-                    "Change Keybind",
-                    &mut config.is_changing_keybind,
-                    &mut config.current_keybind,
-                );
-            });
-
-            panel.horizontal(|h| {
-                key_button(
-                    h,
-                    &self.keyboard,
-                    "Change Repeated key",
-                    &mut config.is_changing_repeated_key,
-                    &mut config.repeated_key,
-                );
+                h.vertical_centered_justified(|v| {
+                    key_button(
+                        v,
+                        &self.keyboard,
+                        "Change Keybind",
+                        &mut config.is_changing_keybind,
+                        &mut config.current_keybind,
+                    );
+                    key_button(
+                        v,
+                        &self.keyboard,
+                        "Change Repeated key",
+                        &mut config.is_changing_repeated_key,
+                        &mut config.repeated_key,
+                    );
+                })
             });
         });
 

@@ -56,29 +56,29 @@ impl Keyboard {
 pub(crate) fn key_button(
     ui: &mut Ui,
     keyboard: &Mutex<Keyboard>,
-    text: &str,
+    prefix: &str,
     changing: &mut bool,
     target: &mut Option<Key>,
 ) {
     let keyboard = keyboard.lock().unwrap();
+    let mut label = prefix.to_string();
 
-    if ui.button(text).clicked() {
+    if *changing {
+        label = "Press any key...".to_string();
+    } else {
+        if let Some(key) = target {
+            label.push_str(&format!(" (Current: {key:?})"));
+        } else {
+            label.push_str(" (Current: None)");
+        }
+    }
+    if ui.button(label).clicked() {
         *changing = true;
     }
     if *changing {
         if let Some(key) = keyboard.read() {
             *changing = false;
             *target = Some(key);
-        }
-    }
-
-    if *changing {
-        ui.label("Press any key...");
-    } else {
-        if let Some(key) = target {
-            ui.label(format!("Current: {key:?}"));
-        } else {
-            ui.label("Current: None");
         }
     }
 }
