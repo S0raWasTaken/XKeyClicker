@@ -8,9 +8,11 @@ use tokio::sync::watch;
 
 use rdev::{listen, Event, EventType, Key};
 
+#[derive(Debug)]
 pub(crate) struct Keyboard {
     should_receive: watch::Sender<bool>,
     receiver: mpsc::Receiver<Key>,
+    pub state: bool,
 }
 
 impl Keyboard {
@@ -23,6 +25,7 @@ impl Keyboard {
         Self {
             should_receive,
             receiver: rx,
+            state: false,
         }
     }
 
@@ -51,6 +54,11 @@ impl Keyboard {
     pub fn stop(&self) {
         self.should_receive.send_replace(false);
     }
+
+    pub fn swap_state(&mut self) -> bool {
+        self.state.not_mut();
+        self.state
+    }
 }
 
 pub(crate) fn key_button(
@@ -78,5 +86,15 @@ pub(crate) fn key_button(
             *changing = false;
             *target = Some(key);
         }
+    }
+}
+
+trait NotMut {
+    fn not_mut(&mut self);
+}
+
+impl NotMut for bool {
+    fn not_mut(&mut self) {
+        *self = !*self;
     }
 }

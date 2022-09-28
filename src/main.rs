@@ -32,13 +32,25 @@ fn main() {
     );
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 struct Config {
     is_changing_keybind: bool,
     current_keybind: Option<Key>,
     is_changing_repeated_key: bool,
     repeated_key: Option<Key>,
     click_interval: u64,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            is_changing_keybind: Default::default(),
+            current_keybind: Some(Key::F7),
+            is_changing_repeated_key: Default::default(),
+            repeated_key: Option::default(),
+            click_interval: 100,
+        }
+    }
 }
 
 struct App {
@@ -52,9 +64,25 @@ impl Default for App {
         let (tx, rx) = watch::channel(Config::default());
         let keyboard = Arc::new(Mutex::new(Keyboard::start_listening()));
         let handle_kb = keyboard.clone();
+        let handle_rx = rx.clone();
 
-        thread::spawn(move || loop {
-            let _ = handle(&handle_kb, &rx);
+        thread::spawn(move || {
+            let handle_kb_copy = handle_kb.clone();
+            thread::spawn(move || loop {
+                let app = &handle_rx.borrow();
+
+                if let Some(repeated_key) = app.repeated_key {
+                    if handle_kb_copy.lock().unwrap().state {
+                        simulate(&EventType::KeyPress(repeated_key)).ok();
+                        simulate(&EventType::KeyRelease(repeated_key)).ok();
+                        std::thread::sleep(Duration::from_millis(app.click_interval));
+                    }
+                }
+            });
+
+            loop {
+                handle(&handle_kb, &rx);
+            }
         });
 
         Self {
@@ -106,15 +134,12 @@ fn handle(keyboard: &Mutex<Keyboard>, app: &watch::Receiver<Config>) -> Option<(
         return None;
     };
 
-    let repeated_key = app.repeated_key?;
     let current_key = app.current_keybind?;
     let key = keyboard.lock().unwrap().read();
 
     if let Some(keybind) = key {
         if keybind == current_key {
-            simulate(&EventType::KeyPress(repeated_key)).ok();
-            simulate(&EventType::KeyRelease(repeated_key)).ok();
-            std::thread::sleep(Duration::from_millis(app.click_interval));
+            keyboard.lock().unwrap().swap_state();
         }
     }
 
