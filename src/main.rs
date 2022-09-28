@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![windows_subsystem = "windows"]
+
 mod util;
 
 use std::{
@@ -16,12 +19,17 @@ use tokio::sync::watch;
 use util::{key_button, Keyboard};
 
 fn main() {
-    let mut opts = NativeOptions::default();
+    let options = NativeOptions {
+        max_window_size: Some(Vec2::new(420., 52.)),
+        resizable: false,
+        ..Default::default()
+    };
 
-    opts.max_window_size = Some(Vec2::new(420., 52.));
-    opts.resizable = false;
-
-    eframe::run_native("XKeyClicker", opts, Box::new(|_| Box::new(App::default())))
+    eframe::run_native(
+        "XKeyClicker",
+        options,
+        Box::new(|_| Box::new(App::default())),
+    );
 }
 
 #[derive(Default, Clone)]
