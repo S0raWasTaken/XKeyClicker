@@ -18,7 +18,6 @@ pub enum KeyType {
     None,
 }
 
-#[derive(Clone)]
 pub struct SendBox<T>(pub T);
 
 unsafe impl<T> Send for SendBox<T> {}

@@ -30,20 +30,16 @@ mod primitives;
 fn main() {
     let (entry_sender, entry_receiver) = channel();
     let entry_receiver = Arc::new(SendBox(entry_receiver));
-    let entry_sender = SendBox(entry_sender);
+
+    // Spawn keybind listener
+    spawn(move || listen(move |e| keybind(&e, &entry_receiver.clone())).unwrap());
 
     // Spawn auto clicker
     spawn(auto_clicker);
 
-    // Spawn GUI
-    spawn(move || {
-        let app = Application::new(Some("com.s0ra.xkeyclicker"), ApplicationFlags::default());
-        app.connect_activate(move |app| build_ui(app, entry_sender.clone()));
-        app.run();
-    });
-
-    // keybind listener
-    listen(move |e| keybind(&e, &entry_receiver.clone())).unwrap();
+    let app = Application::new(Some("com.s0ra.xkeyclicker"), ApplicationFlags::default());
+    app.connect_activate(move |app| build_ui(app, entry_sender.clone()));
+    app.run();
 }
 
 fn auto_clicker() {
@@ -59,7 +55,7 @@ fn auto_clicker() {
     }
 }
 
-fn build_ui(app: &Application, entry_sender: SendBox<Sender<Entry>>) {
+fn build_ui(app: &Application, entry_sender: Sender<Entry>) {
     let builder = Builder::from_string(include_str!("xkeyclicker.ui"));
     let window: ApplicationWindow = builder.object("window").unwrap();
 
@@ -79,10 +75,10 @@ fn build_ui(app: &Application, entry_sender: SendBox<Sender<Entry>>) {
     let start_keybind_button: Button = builder.object("start_keybind").unwrap();
     let keybind_entry: Entry = builder.object("keybind_entry").unwrap();
 
-    let entry_sender_copy = entry_sender.0.clone();
+    let entry_sender_copy = entry_sender.clone();
 
     start_keybind_button
-        .connect_clicked(move |_| set_start_keybind(&entry_sender.0.clone(), &keybind_entry));
+        .connect_clicked(move |_| set_start_keybind(&entry_sender.clone(), &keybind_entry));
 
     let key_selector_button: Button = builder.object("key_selector").unwrap();
     let repeated_key_entry: Entry = builder.object("repeated_key_entry").unwrap();
