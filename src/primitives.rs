@@ -17,7 +17,7 @@ impl NotMut for bool {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum KeyType {
     Repeated,
     Keybind,
@@ -54,26 +54,29 @@ impl XKeyClicker {
 
 #[derive(Debug)]
 pub struct Cooldown {
+    pub mins: u64,
+    pub secs: u64,
     pub millis: u64,
     pub micros: u64,
-    pub nanos: u64,
 }
 
 impl Default for Cooldown {
     fn default() -> Self {
         Self {
+            mins: 0,
+            secs: 0,
             millis: 100,
             micros: 0,
-            nanos: 0,
         }
     }
 }
 
 impl Cooldown {
     pub fn as_duration(&self) -> Duration {
-        Duration::from_millis(self.millis)
+        Duration::from_secs(self.mins * 60) // There's no Duration::from_mins() ¯\_(ツ)_/¯
+            + Duration::from_secs(self.secs)
+            + Duration::from_millis(self.millis)
             + Duration::from_micros(self.micros)
-            + Duration::from_nanos(self.nanos)
     }
 }
 

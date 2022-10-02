@@ -65,42 +65,28 @@ fn build_ui(app: &Application, entry_sender: Sender<Entry>, xkc_handle: ArcXKeyC
 
     window.set_application(Some(app));
 
-    let time_millis: Entry = builder.object("time_millis").unwrap();
+    macro_rules! time_entry {
+        ($time_type:tt, $default_cooldown:tt) => {
+            let $time_type: Entry = builder
+                .object(&format!("time_{}", stringify!($time_type)))
+                .unwrap();
+            let xkc_handle_clone = xkc_handle.clone();
 
-    let xkc_handle_clone = xkc_handle.clone();
+            $time_type.connect_changed(move |entry| {
+                if let Ok(cooldown) = entry.buffer().text().parse::<u64>() {
+                    xkc_handle_clone.cooldown.lock().unwrap().$time_type = cooldown;
+                } else if !entry.buffer().text().is_empty() {
+                    entry.set_text("0");
+                    xkc_handle_clone.cooldown.lock().unwrap().$time_type = 0;
+                }
+            });
+        };
+    }
 
-    time_millis.connect_changed(move |entry| {
-        if let Ok(cooldown) = entry.buffer().text().parse::<u64>() {
-            xkc_handle_clone.cooldown.lock().unwrap().millis = cooldown;
-        } else if !entry.buffer().text().is_empty() {
-            entry.set_text("100");
-            xkc_handle_clone.cooldown.lock().unwrap().millis = 100;
-        }
-    });
-
-    let time_micros: Entry = builder.object("time_micros").unwrap();
-    let xkc_handle_clone = xkc_handle.clone();
-
-    time_micros.connect_changed(move |entry| {
-        if let Ok(cooldown) = entry.buffer().text().parse::<u64>() {
-            xkc_handle_clone.cooldown.lock().unwrap().micros = cooldown;
-        } else if !entry.buffer().text().is_empty() {
-            entry.set_text("0");
-            xkc_handle_clone.cooldown.lock().unwrap().micros = 0;
-        }
-    });
-
-    let time_nanos: Entry = builder.object("time_nanos").unwrap();
-    let xkc_handle_clone = xkc_handle.clone();
-
-    time_nanos.connect_changed(move |entry| {
-        if let Ok(cooldown) = entry.buffer().text().parse::<u64>() {
-            xkc_handle_clone.cooldown.lock().unwrap().nanos = cooldown;
-        } else if !entry.buffer().text().is_empty() {
-            entry.set_text("0");
-            xkc_handle_clone.cooldown.lock().unwrap().nanos = 0;
-        }
-    });
+    time_entry!(mins, 0);
+    time_entry!(secs, 0);
+    time_entry!(millis, 100);
+    time_entry!(micros, 0);
 
     let start_keybind_button: Button = builder.object("start_keybind").unwrap();
     let keybind_entry: Entry = builder.object("keybind_entry").unwrap();
@@ -109,10 +95,11 @@ fn build_ui(app: &Application, entry_sender: Sender<Entry>, xkc_handle: ArcXKeyC
     let xkc_handle_clone = xkc_handle.clone();
 
     start_keybind_button.connect_clicked(move |_| {
-        set_start_keybind(
+        set_keybind(
             &entry_sender.clone(),
             &keybind_entry,
             &xkc_handle_clone.clone(),
+            KeyType::Keybind,
         );
     });
 
@@ -120,34 +107,26 @@ fn build_ui(app: &Application, entry_sender: Sender<Entry>, xkc_handle: ArcXKeyC
     let repeated_key_entry: Entry = builder.object("repeated_key_entry").unwrap();
 
     key_selector_button.connect_clicked(move |_| {
-        set_repeated_key(
+        set_keybind(
             &entry_sender_copy.clone(),
             &repeated_key_entry,
             &xkc_handle.clone(),
+            KeyType::Repeated,
         );
     });
 
     window.show_all();
 }
 
-fn set_repeated_key(
+fn set_keybind(
     entry_sender: &Sender<Entry>,
-    repeated_key_entry: &Entry,
+    key_entry: &Entry,
     xkc_handle: &ArcXKeyClicker,
+    key_type: KeyType,
 ) {
-    *xkc_handle.should_recv.lock().unwrap() = KeyType::Repeated;
-    repeated_key_entry.set_text("Press a key to bind");
-    entry_sender.send(repeated_key_entry.clone()).unwrap();
-}
-
-fn set_start_keybind(
-    entry_sender: &Sender<Entry>,
-    keybind_entry: &Entry,
-    xkc_handle: &ArcXKeyClicker,
-) {
-    *xkc_handle.should_recv.lock().unwrap() = KeyType::Keybind;
-    keybind_entry.set_text("Press a key to bind");
-    entry_sender.send(keybind_entry.clone()).unwrap();
+    *xkc_handle.should_recv.lock().unwrap() = key_type;
+    key_entry.set_text("Press a key to bind");
+    entry_sender.send(key_entry.clone()).unwrap();
 }
 
 fn keybind(event: &Event, receiver: &Arc<SendBox<Receiver<Entry>>>, xkc_handle: &ArcXKeyClicker) {
