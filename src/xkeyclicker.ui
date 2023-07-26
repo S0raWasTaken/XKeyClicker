@@ -22,7 +22,7 @@
             <property name="label-xalign">0</property>
             <property name="shadow-type">in</property>
             <child>
-              <!-- n-columns=1 n-rows=2 -->
+              <!-- n-columns=4 n-rows=2 -->
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -33,6 +33,46 @@
                 <property name="margin-top">10</property>
                 <property name="column-spacing">10</property>
                 <property name="row-homogeneous">True</property>
+                <child>
+                  <object class="GtkEntry" id="time_micros">
+                    <property name="name">MilliEntry</property>
+                    <property name="height-request">35</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="hexpand">True</property>
+                    <property name="max-length">9</property>
+                    <property name="width-chars">0</property>
+                    <property name="text" translatable="yes">0</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">3</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-bottom">15</property>
+                    <property name="label" translatable="yes">Microseconds</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">3</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-bottom">15</property>
+                    <property name="label" translatable="yes">Milliseconds</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
                 <child>
                   <object class="GtkEntry" id="time_millis">
                     <property name="name">MilliEntry</property>
@@ -45,7 +85,23 @@
                     <property name="text" translatable="yes">100</property>
                   </object>
                   <packing>
-                    <property name="left-attach">0</property>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="time_secs">
+                    <property name="name">MilliEntry</property>
+                    <property name="height-request">35</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="hexpand">True</property>
+                    <property name="max-length">9</property>
+                    <property name="width-chars">0</property>
+                    <property name="text" translatable="yes">0</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
                     <property name="top-attach">0</property>
                   </packing>
                 </child>
@@ -54,11 +110,39 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="margin-bottom">15</property>
-                    <property name="label" translatable="yes">Milliseconds</property>
+                    <property name="label" translatable="yes">Seconds</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-bottom">15</property>
+                    <property name="label" translatable="yes">Minutes</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
                     <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="time_mins">
+                    <property name="name">MilliEntry</property>
+                    <property name="height-request">35</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="hexpand">True</property>
+                    <property name="max-length">9</property>
+                    <property name="width-chars">0</property>
+                    <property name="text" translatable="yes">0</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
                   </packing>
                 </child>
               </object>
