@@ -11,14 +11,20 @@ Using it should be straight forward
 
 ## Installing
 > Currently not working on MacOS https://github.com/S0raWasTaken/XKeyClicker/issues/5 <br>Windows works fine
+
+### Using pre-built binaries
+#### Windows
+Binaries can be found [**here**](https://github.com/S0raWasTaken/XKeyClicker/releases/tag/0.1.0w). Install them wherever you want, or just extract and run it from anywhere.
+#### Linux
+Didn't make them ***yet***, I will probably try solving https://github.com/S0raWasTaken/XKeyClicker/issues/6 first.
+#### MacOS
+https://github.com/S0raWasTaken/XKeyClicker/issues/5 `¯\_(ツ)_/¯`
 ### Compiling from source
 Either you could clone this repo & build it with `cargo build --release` or you could simply do:
 ```sh
 cargo install --git https://github.com/S0raWasTaken/XKeyClicker
 ``` 
 That already moves your built binary to your cargo bin folder
-### Using pre-built binaries
-I haven't built binaries yet, but this option will (hopefully when I remember) be available in the future
 
 ## About
 This project was inspired on [XClicker](https://github.com/robiot/xclicker), a mouse autoclicker for X11 (that also works on wayland last time I checked).<br><br>
